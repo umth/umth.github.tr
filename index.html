@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>City Stats</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+
+        .leaflet-tile-pane {
+            opacity: 1.3;
+        }
+
+        .options {
+            position: absolute;
+            top: 8px;
+            left: 46px;
+            z-index: 20000;
+        }
+    </style>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.5/leaflet.css" />
+    <link rel="stylesheet" href="http://humangeo.github.com/leaflet-dvf/dist/css/dvf.css" type="text/css" media="screen" />
+</head>
+
+<body data-gr-c-s-loaded="true" class="">
+<div class="options">
+    <select id="field-select">
+        <option>Population 90</option>
+        <option>Population 97</option>
+        <option>Plaka</option>
+        <option>Name</option></select>
+</div>
+<div id="map" class="leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0" style="position: relative; height: 961px; outline: none;">
+
+    <script async="" src="http://www.google-analytics.com/analytics.js"></script>
+
+
+
+
+
+
+
+<script>
+        function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','http://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-42733116-1', 'humangeo.github.io');
+ga('send', 'pageview');
+</script>
+
+<script src="src/ilmap.js"></script>
+<script src="src/ulp.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script type="text/javascript" src="http://cdn.leafletjs.com/leaflet-0.7.5/leaflet.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script type="text/javascript" src="src/leaflet-dvf.js"></script>
+
+
+
+
+<script type="text/javascript" src="src/javascript.util.js"></script>
+<script type="text/javascript" src="src/leaflet.geometryutil.js"
+<script type="text/javascript" src="src/jsts.js"></script>
+<script type="text/javascript">
+
+
+    var map = L.map('map',{
+        center: [38.77241, 35.4932],
+        zoom: 6,
+        minZoom: 3,
+        maxZoom: 14,
+        zoomControl:false
+    });
+
+    var resize = function () {
+        var $map = $('#map');
+
+        $map.height($(window).height());
+
+        if (map) {
+            map.invalidateSize();
+        }
+    };
+
+    $(window).on('resize', function () {
+        resize();
+    });
+
+    resize();
+
+    var uyduharitasi = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+    var googleharitasi = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+    var geceharitasi = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {subdomains:'abcd'}).addTo(map);
+
+
+
+
+
+
+
+
+
+
+    var countyPolygons = L.geoJson(ilmap,{style: pro}).addTo(map);
+
+    function pro (ilmap) {
+        return{
+            fillColor: 'red',
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        }
+    };
+
+
+    var overlays = {
+        'Dark ': countyPolygons,
+    }
+
+
+    var layerControl = new L.Control.Layers({
+        'Sattelite basemap ': uyduharitasi,
+        'Night view basemap': geceharitasi,
+        'Google basemap': googleharitasi
+    });
+
+    layerControl.addTo(map);
+
+    var legendControl = new L.Control.Legend(overlays,layerControl);
+
+    legendControl.addTo(map);
+
+    // Convert the TopoJSON polygons to GeoJSON and assign some additional properties to each polygon
+    // This is probably a common task for county related visualizations, so this might be moved into a
+    // countyData.js file in the future (similar to stateData and countryData)
+
+
+
+
+
+    var features = countyPolygons.feature;
+
+    var nameLookup = L.GeometryUtils.arrayToMap(ilmapNameLookup, 'NAME');
+
+    for (var i = 0; i < features.length; ++i) {
+        features[i].properties.NAME = features[i].id.toString();
+
+        var countyInfo = nameLookup[features[i].id];
+
+        if (countyInfo) {
+            features[i].properties.POP_90 = countyInfo.pOP_90;
+            features[i].properties.POP_97 = countyInfo.pOP97;
+            features[i].properties.PLAKA = countyInfo.nAME + ', ' + countyInfo.State;
+        }
+    }
+
+    var field = '';
+    var range = L.Util.getNumericRange(ilmap, field);
+
+    // Specify an option of interpolate: false to use only discrete colors rather than interpolating between colors
+    var fillColor = new L.CustomColorFunction(range[0], range[1], L.ColorBrewer.Diverging.RdYlGn['11'].slice(0).reverse(), {
+        interpolate: false
+    });
+
+    var color = new L.CustomColorFunction(range[0], range[1], L.ColorBrewer.Diverging.RdYlGn['11'].slice(0).reverse(), {
+        postProcess: function (y) {
+            var newColor = new L.RGBColor(y);
+
+            newColor.l(0.2);
+
+            return newColor.toRGBString();
+        }
+    });
+
+    var radius = new L.LinearFunction([range[0], 5], [range[1], 20]);
+
+    var options = {
+        locationMode: L.LocationModes.LOOKUP,
+        getIndexKey: function (location, record) {
+            return location.text;
+        },
+        recordsField: null,
+        codeField: 'NAME',
+        locationLookup: countyPolygons, // A GeoJSON FeatureCollection that will be used to lookup boundaries/location
+        locationTextField: 'NAME',
+        //includeBoundary: true, // Whether or not to include a background boundary so people know what boundary each marker is associated with
+        layerOptions: {
+            fillOpacity: 0.9,
+            opacity: 1,
+            weight: 0.5,
+            numberOfSides: 50//,
+            //gradient: true
+        },
+        tooltipOptions: {
+            iconSize: new L.Point(130, 60),
+            iconAnchor: new L.Point(-5, 60)
+        },
+        legendOptions: {
+            numSegments: 11,
+            gradient: false // Use this option to specify whether or not a gradient will be used when displaying the legend
+        },
+        displayOptions: {}
+    };
+
+    options.displayOptions[field] = {
+        fillColor: fillColor,
+        color: color
+    };
+
+    var countyChoropleth = new L.ChoroplethDataLayer(ilmap, options);
+
+    var symbolOptions = $.extend(true, {}, options);
+
+    symbolOptions.layerOptions.gradient = true;
+    symbolOptions.displayOptions[field].radius = radius;
+
+    var countySymbols = new L.DataLayer(ilmap, symbolOptions);
+
+    layerControl.addOverlay(countyChoropleth, 'Choropleth');
+    layerControl.addOverlay(countySymbols, 'Symbols');
+
+    map.addLayer(countyChoropleth);
+
+    var $fieldSelect = $('#field-select');
+
+    var firstObject = ilmap[0];
+    var ignoreFields = {'FIPS':null, '95% CI - High':null, '95% CI - Low':null, '':null, 'MPH Ratio':null};
+
+
+
+    $fieldSelect.on('change', function (e) {
+        var field = $fieldSelect.val();
+        var displayOptions = {};
+        var range = L.Util.getNumericRange(countyStats, field);
+
+        var fillColor = new L.CustomColorFunction(range[0], range[1], L.ColorBrewer.Diverging.RdYlGn['11'].slice(0).reverse(), {
+            interpolate: false
+        });
+
+        var color = new L.CustomColorFunction(range[0], range[1], L.ColorBrewer.Diverging.RdYlGn['11'].slice(0).reverse(), {
+            postProcess: function (y) {
+                var newColor = new L.RGBColor(y);
+
+                newColor.l(0.2);
+
+                return newColor.toRGBString();
+            }
+        });
+
+        var radius = new L.LinearFunction([range[0], 5], [range[1], 20]);
+
+        displayOptions[field] = {
+            fillColor: fillColor,
+            color: color
+        }
+
+        countyChoropleth.setDisplayOptions(displayOptions);
+    });
+
+
+</script>
+</body>
+</html>
